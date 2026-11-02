@@ -1,0 +1,250 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Каталог товаров",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {
+      "ProductFields": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Телефон"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "example": 15000
+          },
+          "category": {
+            "type": "string",
+            "enum": ["electronics", "clothing", "food", "other"]
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 5
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "Описание товара"
+          }
+        }
+      },
+      "ProductInput": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProductFields" },
+          {
+            "type": "object",
+            "required": ["name", "price", "category"]
+          }
+        ]
+      },
+      "Product": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProductInput" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer", "example": 1 },
+              "createdAt": { "type": "string", "format": "date-time" },
+              "imageUrl": { "type": "string" }
+            }
+          }
+        ]
+      }
+    },
+    "parameters": {
+      "ProductId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "responses": {
+      "Product": {
+        "description": "Товар",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Product" }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Ошибка входных данных"
+      },
+      "NotFound": {
+        "description": "Товар не найден"
+      }
+    }
+  },
+  "paths": {
+    "/api/products": {
+      "get": {
+        "summary": "Список товаров",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["electronics", "clothing", "food", "other"]
+            }
+          },
+          {
+            "name": "minPrice",
+            "in": "query",
+            "schema": { "type": "number", "minimum": 0 }
+          },
+          {
+            "name": "maxPrice",
+            "in": "query",
+            "schema": { "type": "number", "minimum": 0 }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "default": 10 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список товаров с пагинацией",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "post": {
+        "summary": "Создать товар",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Product" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/ProductId" }
+      ],
+      "get": {
+        "summary": "Получить один товар",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Product" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "summary": "Заменить товар полностью",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Product" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "summary": "Изменить товар частично",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  { "$ref": "#/components/schemas/ProductFields" },
+                  { "type": "object", "minProperties": 1 }
+                ]
+              },
+              "example": { "price": 12000 }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Product" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "summary": "Удалить товар",
+        "responses": {
+          "204": { "description": "Товар удалён" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/products/{id}/image": {
+      "parameters": [
+        { "$ref": "#/components/parameters/ProductId" }
+      ],
+      "post": {
+        "summary": "Загрузить изображение",
+        "description": "JPEG или PNG, максимум 2 МБ",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["image"],
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Product" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  }
+}
